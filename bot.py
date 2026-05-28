@@ -47,10 +47,18 @@ try:
         firebase_sa_env = os.environ.get('FIREBASE_SERVICE_ACCOUNT')
         if firebase_sa_env:
             import json
+            import base64
             print(f"{Colors.OKBLUE}[Firebase] Loading service account from environment variable.{Colors.ENDC}")
             firebase_sa_env = firebase_sa_env.strip()
             if (firebase_sa_env.startswith("'") and firebase_sa_env.endswith("'")) or (firebase_sa_env.startswith('"') and firebase_sa_env.endswith('"')):
                 firebase_sa_env = firebase_sa_env[1:-1].strip()
+            
+            if not firebase_sa_env.startswith('{'):
+                try:
+                    firebase_sa_env = base64.b64decode(firebase_sa_env).decode('utf-8')
+                except Exception as b64_err:
+                    print(f"{Colors.WARNING}[Firebase] Base64 decode failed: {b64_err}. Trying raw JSON...{Colors.ENDC}")
+                    
             sa_info = json.loads(firebase_sa_env)
             cred = credentials.Certificate(sa_info)
             firebase_admin.initialize_app(cred)
