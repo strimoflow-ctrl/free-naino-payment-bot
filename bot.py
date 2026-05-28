@@ -941,9 +941,36 @@ def handle_message(message):
         )
 
 
+def run_health_check_server():
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    import os
+
+    class HealthCheckHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"OK")
+
+        def log_message(self, format, *args):
+            # Suppress logs to keep terminal clean
+            pass
+
+    port = int(os.environ.get("PORT", 8080))
+    server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+    print(f"[Health Check] Server listening on port {port}...")
+    server.serve_forever()
+
+
 if __name__ == '__main__':
-    print(f"\n{Colors.OKGREEN}Bot is now polling and waiting for messages...{Colors.ENDC}")
+    import threading
     import time
+    
+    # Start the HTTP health check server in a background daemon thread
+    health_thread = threading.Thread(target=run_health_check_server, daemon=True)
+    health_thread.start()
+
+    print(f"\n{Colors.OKGREEN}Bot is now polling and waiting for messages...{Colors.ENDC}")
     while True:
         try:
             bot.infinity_polling(timeout=60, long_polling_timeout=30)
