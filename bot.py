@@ -858,9 +858,39 @@ def handle_callbacks(call):
             edit_message_safe(chat_id, message_id, f"❌ *Failed to generate key:* {e}", get_back_to_main_keyboard())
 
 
+def log_user_to_channel(user):
+    channel_id = os.environ.get('USER_LOG_CHANNEL_ID')
+    if not channel_id:
+        return
+    try:
+        username_str = f"@{user.username}" if user.username else "None"
+        last_name_str = f" {user.last_name}" if user.last_name else ""
+        full_name = f"{user.first_name}{last_name_str}"
+        
+        log_text = (
+            "👤 *New Bot User Started!*\n"
+            "━━━━━━━━━━━━━━━━━━━━━\n"
+            f"• *Name:* `{escape_markdown(full_name)}`\n"
+            f"• *Username:* {escape_markdown(username_str)}\n"
+            f"• *User ID (Chat ID):* `{user.id}`\n"
+            f"• *Profile Link:* [Click here to view](tg://user?id={user.id})\n"
+        )
+        bot.send_message(channel_id, log_text, parse_mode="Markdown")
+    except Exception as e:
+        print(f"[Log Channel] Failed to send user log to channel {channel_id}: {e}")
+
+
+@bot.message_handler(commands=['ping'])
+def handle_ping(message):
+    bot.reply_to(message, "🏓 *Pong!* Bot is active and running.", parse_mode="Markdown")
+
+
 # 3. Start Command Handler
 @bot.message_handler(commands=['start'])
 def handle_start(message):
+    # Log user details to channel
+    log_user_to_channel(message.from_user)
+    
     # Block if membership check fails
     if not check_membership(message.from_user):
         send_membership_warning(message.chat.id)
