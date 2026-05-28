@@ -863,6 +863,12 @@ def log_user_to_channel(user):
     if not channel_id:
         return
     try:
+        # Check if user already exists in Firestore 'telegram_users' collection to avoid duplicate logs
+        user_ref = db.collection('telegram_users').document(str(user.id))
+        user_doc = user_ref.get()
+        if user_doc.exists:
+            return  # Already logged previously
+            
         username_str = f"@{user.username}" if user.username else "None"
         last_name_str = f" {user.last_name}" if user.last_name else ""
         full_name = f"{user.first_name}{last_name_str}"
@@ -876,8 +882,18 @@ def log_user_to_channel(user):
             f"• *Profile Link:* [Click here to view](tg://user?id={user.id})\n"
         )
         bot.send_message(channel_id, log_text, parse_mode="Markdown")
+        
+        # Save user to Firestore to mark as logged
+        user_ref.set({
+            'first_name': user.first_name,
+            'last_name': user.last_name or '',
+            'username': user.username or '',
+            'created_at': datetime.utcnow()
+        })
+        print(f"[Log Channel] Logged new user {user.id} to channel and Firestore.")
     except Exception as e:
-        print(f"[Log Channel] Failed to send user log to channel {channel_id}: {e}")
+        print(f"[Log Channel] Failed to send/save user log: {e}")
+
 
 
 @bot.message_handler(commands=['ping'])
